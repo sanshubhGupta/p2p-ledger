@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>Socket Test</title></head>
+<body>
+<h2>Socket.io Test</h2>
+<div id="log"></div>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const userId = new URLSearchParams(window.location.search).get('userId') || 'default-user';
+  const socket = io('http://localhost:3000', { query: { userId } });
+
+  function log(msg) {
+    document.getElementById('log').innerHTML += '<p>' + new Date().toLocaleTimeString() + ' — ' + msg + '</p>';
+  }
+
+  log('Connecting as userId: ' + userId);
+  socket.on('connect', () => log('Connected! Socket ID: ' + socket.id));
+  socket.on('balance_updated', (data) => log('Balance update: ' + JSON.stringify(data)));
+  socket.on('disconnect', () => log('Disconnected'));
+</script>
+</body>
+</html>
