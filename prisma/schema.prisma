@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  wallet    Wallet?
+}
+
+model Wallet {
+  id                   String        @id @default(uuid())
+  userId               String        @unique
+  balance              Decimal       @default(0) @db.Decimal(18, 2)
+  version              Int           @default(0)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  user                 User          @relation(fields: [userId], references: [id])
+  sentTransactions     Transaction[] @relation("SentTransactions")
+  receivedTransactions Transaction[] @relation("ReceivedTransactions")
+}
+
+model Transaction {
+  id               String            @id @default(uuid())
+  senderWalletId   String
+  receiverWalletId String
+  amount           Decimal           @db.Decimal(18, 2)
+  status           TransactionStatus
+  idempotencyKey   String?           @unique
+  createdAt        DateTime          @default(now())
+  senderWallet     Wallet            @relation("SentTransactions", fields: [senderWalletId], references: [id])
+  receiverWallet   Wallet            @relation("ReceivedTransactions", fields: [receiverWalletId], references: [id])
+
+  @@index([senderWalletId, createdAt])
+  @@index([receiverWalletId, createdAt])
+  @@index([idempotencyKey])
+}
