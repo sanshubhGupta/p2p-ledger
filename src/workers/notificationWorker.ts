@@ -1,6 +1,10 @@
 import { Worker, Queue } from 'bullmq';
+import 'dotenv/config';
 
-const connection = { host: '127.0.0.1', port: 6379 };
+const connection = {
+  host: new URL(process.env.REDIS_URL || 'redis://127.0.0.1:6379').hostname,
+  port: Number(new URL(process.env.REDIS_URL || 'redis://127.0.0.1:6379').port) || 6379,
+};
 
 // DLQ ensures zero event loss. Ops can inspect 'failed-notifications' queue,
 // fix the underlying issue (email provider down), and requeue jobs manually.
@@ -11,7 +15,6 @@ const worker = new Worker(
   async (job) => {
     console.log('Processing notification for transaction:', job.data.transactionId);
 
-    // Simulate email API call (replace with Resend/SendGrid in production)
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     console.log('Email sent to:', job.data.senderEmail, 'and', job.data.receiverEmail);

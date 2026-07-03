@@ -1,8 +1,9 @@
 import { Queue } from 'bullmq';
+import 'dotenv/config';
 
 const connection = {
-  host: '127.0.0.1',
-  port: 6379,
+  host: new URL(process.env.REDIS_URL || 'redis://127.0.0.1:6379').hostname,
+  port: Number(new URL(process.env.REDIS_URL || 'redis://127.0.0.1:6379').port) || 6379,
 };
 
 const notificationQueue = new Queue('transaction-notifications', {
