@@ -226,3 +226,43 @@ body {
   .form-row { flex-direction: column; align-items: flex-start; }
   .form-row select, .form-row input { max-width: 100%; }
 }
+
+.stress-test {
+  border: 1px solid var(--ink-soft);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.stress-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+
+.stress-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ink-soft);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+}
+.stress-item:last-child { border-bottom: none; }
+
+.stress-num {
+  color: var(--muted);
+  min-width: 28px;
+}
+
+.stress-status {
+  min-width: 70px;
+  font-weight: 600;
+}
+.stress-item.success .stress-status { color: var(--credit); }
+.stress-item.failed .stress-status { color: var(--debit); }
+
+.stress-detail {
+  color: var(--muted);
+  flex: 1;
+}

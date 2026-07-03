@@ -3,6 +3,7 @@ import { fetchWalletBalance } from './api';
 import { WALLETS } from './wallets';
 import TransferForm from './TransferForm';
 import LiveFeed from './LiveFeed';
+import StressTest from './StressTest';
 
 function WalletCard({ wallet, balance, previousBalance, source, error }) {
   const delta = previousBalance !== null && balance !== null
@@ -89,6 +90,8 @@ export default function App() {
       <TransferForm onTransferComplete={loadBalances} />
 
       <LiveFeed />
+
+      <StressTest onComplete={loadBalances} />
 
       <button className="refresh-btn" onClick={loadBalances} disabled={loading}>
         {loading ? 'Refreshing…' : 'Refresh balances'}
