@@ -4,10 +4,11 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    "types": ["node", "express", "jest"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "prisma.config.ts", "prisma/seed.ts"],
+  "exclude": ["node_modules", "dist", "prisma.config.ts", "prisma/seed.ts", "src/**/__tests__/**"],
   "ts-node": {
     "files": true,
     "compilerOptions": {
