@@ -9,6 +9,7 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "prisma.config.ts", "prisma/seed.ts"],
   "ts-node": {
+    "files": true,
     "compilerOptions": {
       "rootDir": "."
     }

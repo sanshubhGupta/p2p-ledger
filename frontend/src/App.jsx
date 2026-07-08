@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { fetchWalletBalance } from './api';
+import { fetchWalletBalance, login } from './api';
 import { WALLETS } from './wallets';
 import TransferForm from './TransferForm';
 import LiveFeed from './LiveFeed';
@@ -40,7 +40,42 @@ const INITIAL_WALLET_STATE = {
   error: false,
 };
 
+function LoginScreen({ onLogin, loggingIn, loginError }) {
+  return (
+    <div className="app">
+      <header className="masthead">
+        <p className="masthead-eyebrow">P2P Ledger</p>
+        <h1>Log in</h1>
+      </header>
+
+      <p className="status-line" style={{ marginBottom: 16 }}>
+        Demo auth — pick a user, no password required.
+      </p>
+
+      <div className="ledger">
+        {Object.entries(WALLETS).map(([key, w]) => (
+          <button
+            key={key}
+            className="refresh-btn"
+            disabled={loggingIn}
+            onClick={() => onLogin(key)}
+          >
+            {loggingIn ? 'Logging in…' : `Log in as ${w.name}`}
+          </button>
+        ))}
+      </div>
+
+      {loginError && <p className="status-line error">{loginError}</p>}
+    </div>
+  );
+}
+
 export default function App() {
+  const [currentUserKey, setCurrentUserKey] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState(null);
+
   const [alice, setAlice] = useState(INITIAL_WALLET_STATE);
   const [bob, setBob] = useState(INITIAL_WALLET_STATE);
   const [loading, setLoading] = useState(true);
@@ -70,16 +105,46 @@ export default function App() {
     });
   }, []);
 
+  const handleLogin = async (key) => {
+    setLoggingIn(true);
+    setLoginError(null);
+    try {
+      const t = await login(WALLETS[key].userId);
+      setToken(t);
+      setCurrentUserKey(key);
+    } catch (err) {
+      setLoginError(err.message);
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setCurrentUserKey(null);
+  };
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional initial fetch on mount
+    if (!currentUserKey) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional fetch on login
     loadBalances();
-  }, [loadBalances]);
+  }, [currentUserKey, loadBalances]);
+
+  if (!currentUserKey) {
+    return <LoginScreen onLogin={handleLogin} loggingIn={loggingIn} loginError={loginError} />;
+  }
 
   return (
     <div className="app">
       <header className="masthead">
         <p className="masthead-eyebrow">P2P Ledger</p>
         <h1>Wallet Dashboard</h1>
+        <p className="status-line">
+          Logged in as {WALLETS[currentUserKey].name}{' '}
+          <button className="refresh-btn" style={{ marginLeft: 8 }} onClick={handleLogout}>
+            Switch user
+          </button>
+        </p>
       </header>
 
       <div className="ledger">
@@ -87,11 +152,15 @@ export default function App() {
         <WalletCard wallet={WALLETS.bob} {...bob} />
       </div>
 
-      <TransferForm onTransferComplete={loadBalances} />
+      <TransferForm
+        onTransferComplete={loadBalances}
+        token={token}
+        currentUserKey={currentUserKey}
+      />
 
       <LiveFeed />
 
-      <StressTest onComplete={loadBalances} />
+      <StressTest onComplete={loadBalances} token={token} currentUserKey={currentUserKey} />
 
       <button className="refresh-btn" onClick={loadBalances} disabled={loading}>
         {loading ? 'Refreshing…' : 'Refresh balances'}

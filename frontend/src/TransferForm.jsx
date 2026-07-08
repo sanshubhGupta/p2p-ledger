@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { submitTransfer } from './api';
 import { WALLETS } from './wallets';
 
-const WALLET_ENTRIES = Object.entries(WALLETS); // [key, walletObj][]
+const WALLET_ENTRIES = Object.entries(WALLETS);
 
-export default function TransferForm({ onTransferComplete }) {
-  const [fromKey, setFromKey] = useState('alice');
-  const [toKey, setToKey] = useState('bob');
+export default function TransferForm({ onTransferComplete, token, currentUserKey }) {
+  const fromKey = currentUserKey;
+  const [toKey, setToKey] = useState(
+    Object.keys(WALLETS).find((k) => k !== currentUserKey)
+  );
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
@@ -30,7 +32,8 @@ export default function TransferForm({ onTransferComplete }) {
       const { transaction } = await submitTransfer(
         WALLETS[fromKey].id,
         WALLETS[toKey].id,
-        numericAmount
+        numericAmount,
+        token
       );
       setResult({
         type: 'success',
@@ -51,7 +54,7 @@ export default function TransferForm({ onTransferComplete }) {
 
       <div className="form-row">
         <label htmlFor="from-wallet">From</label>
-        <select id="from-wallet" value={fromKey} onChange={(e) => setFromKey(e.target.value)}>
+        <select id="from-wallet" value={fromKey} disabled>
           {WALLET_ENTRIES.map(([key, w]) => (
             <option key={key} value={key}>{w.name}</option>
           ))}
@@ -61,9 +64,11 @@ export default function TransferForm({ onTransferComplete }) {
       <div className="form-row">
         <label htmlFor="to-wallet">To</label>
         <select id="to-wallet" value={toKey} onChange={(e) => setToKey(e.target.value)}>
-          {WALLET_ENTRIES.map(([key, w]) => (
-            <option key={key} value={key}>{w.name}</option>
-          ))}
+          {WALLET_ENTRIES
+            .filter(([key]) => key !== fromKey)
+            .map(([key, w]) => (
+              <option key={key} value={key}>{w.name}</option>
+            ))}
         </select>
       </div>
 

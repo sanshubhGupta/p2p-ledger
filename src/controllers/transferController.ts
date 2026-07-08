@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { executeTransfer } from '../services/TransactionService';
-import { invalidateWalletCache } from '../services/WalletService';
+import { invalidateWalletCache, getWalletOwnerId } from '../services/WalletService';
 import { addNotificationJob } from '../queues/notificationQueue';
 import { io } from '../index';
 import { NotificationService } from '../socket/NotificationService';
@@ -26,6 +26,12 @@ export const transferHandler = async (req: Request, res: Response): Promise<void
   }
 
   try {
+    const ownerId = await getWalletOwnerId(senderWalletId);
+    if (!req.user || req.user.userId !== ownerId) {
+      res.status(403).json({ error: 'You can only transfer from your own wallet' });
+      return;
+    }
+
     const transaction = await executeTransfer(
       senderWalletId,
       receiverWalletId,
@@ -44,12 +50,9 @@ export const transferHandler = async (req: Request, res: Response): Promise<void
       );
     }
 
-    // Real-time balance update via WebSocket (targeted to sender/receiver if connected)
     NotificationService.emitBalanceUpdate(io, senderWalletId, 'updated');
     NotificationService.emitBalanceUpdate(io, receiverWalletId, 'updated');
 
-    // Broadcast to the public live feed
-    // Broadcast to the public live feed
     NotificationService.emitTransactionCompleted(io, {
       ...transaction,
       amount: transaction.amount.toString(),

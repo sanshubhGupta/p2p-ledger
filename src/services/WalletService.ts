@@ -1,4 +1,3 @@
-// Wallet operations — balance read with Redis cache, deposit
 import prisma from '../config/database';
 import redis from '../config/redis';
 import { Prisma } from '../generated/prisma/client/client';
@@ -8,13 +7,11 @@ export const getWalletBalance = async (
 ): Promise<{ balance: string; source: 'cache' | 'database' }> => {
   const cacheKey = 'wallet:balance:' + walletId;
 
-  // Cache check
   const cached = await redis.get(cacheKey);
   if (cached !== null) {
     return { balance: cached, source: 'cache' };
   }
 
-  // Cache miss — query DB
   const wallet = await prisma.wallet.findUniqueOrThrow({
     where: { id: walletId },
     select: { balance: true },
@@ -22,7 +19,6 @@ export const getWalletBalance = async (
 
   const balanceStr = wallet.balance.toString();
 
-  // Store in cache with 10 min TTL
   await redis.set(cacheKey, balanceStr, 'EX', 600);
 
   return { balance: balanceStr, source: 'database' };
@@ -53,4 +49,12 @@ export const depositToWallet = async (walletId: string, amount: string) => {
   await invalidateWalletCache([walletId]);
 
   return wallet;
+};
+
+export const getWalletOwnerId = async (walletId: string): Promise<string> => {
+  const wallet = await prisma.wallet.findUniqueOrThrow({
+    where: { id: walletId },
+    select: { userId: true },
+  });
+  return wallet.userId;
 };

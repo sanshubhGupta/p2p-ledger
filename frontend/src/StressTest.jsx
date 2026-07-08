@@ -4,19 +4,20 @@ import { fetchWalletBalance } from './api';
 
 const BASE_URL = 'http://localhost:3000/api';
 const REQUEST_COUNT = 10;
-const AMOUNT_PER_REQUEST = 200; // deliberately large so 10x would overdraw a 1000 balance
+const AMOUNT_PER_REQUEST = 200;
 
-async function fireTransfer(requestNumber) {
+async function fireTransfer(requestNumber, senderWallet, receiverWallet, token) {
   try {
     const res = await fetch(`${BASE_URL}/transfer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Idempotency-Key': crypto.randomUUID(), // unique per request — required
+        'Idempotency-Key': crypto.randomUUID(),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
-        senderWalletId: WALLETS.alice.id,
-        receiverWalletId: WALLETS.bob.id,
+        senderWalletId: senderWallet.id,
+        receiverWalletId: receiverWallet.id,
         amount: String(AMOUNT_PER_REQUEST),
       }),
     });
@@ -30,10 +31,15 @@ async function fireTransfer(requestNumber) {
   }
 }
 
-export default function StressTest({ onComplete }) {
+export default function StressTest({ onComplete, token, currentUserKey }) {
   const [results, setResults] = useState([]);
   const [running, setRunning] = useState(false);
   const [finalBalance, setFinalBalance] = useState(null);
+
+  const senderKey = currentUserKey;
+  const receiverKey = Object.keys(WALLETS).find((k) => k !== currentUserKey);
+  const senderWallet = WALLETS[senderKey];
+  const receiverWallet = WALLETS[receiverKey];
 
   const runStressTest = async () => {
     setRunning(true);
@@ -41,7 +47,9 @@ export default function StressTest({ onComplete }) {
     setFinalBalance(null);
 
     const settled = await Promise.allSettled(
-      Array.from({ length: REQUEST_COUNT }, (_, i) => fireTransfer(i + 1))
+      Array.from({ length: REQUEST_COUNT }, (_, i) =>
+        fireTransfer(i + 1, senderWallet, receiverWallet, token)
+      )
     );
 
     const outcomes = settled.map((s) => (s.status === 'fulfilled' ? s.value : {
@@ -50,9 +58,8 @@ export default function StressTest({ onComplete }) {
     outcomes.sort((a, b) => a.requestNumber - b.requestNumber);
     setResults(outcomes);
 
-    // Confirm the balance directly from the source of truth, not by trusting our own math
     try {
-      const { balance } = await fetchWalletBalance(WALLETS.alice.id);
+      const { balance } = await fetchWalletBalance(senderWallet.id);
       setFinalBalance(balance);
     } catch {
       setFinalBalance(null);
@@ -70,10 +77,10 @@ export default function StressTest({ onComplete }) {
     <div className="stress-test">
       <p className="masthead-eyebrow">Concurrency Stress Test</p>
       <p className="status-line" style={{ marginTop: 0, marginBottom: 16 }}>
-        Fires {REQUEST_COUNT} simultaneous transfers of {AMOUNT_PER_REQUEST} each from Alice to
-        Bob. The distributed lock allows only one to process at a time — the rest are safely
-        rejected with 429, not queued. This proves Alice's balance can never go negative even
-        under concurrent load.
+        Fires {REQUEST_COUNT} simultaneous transfers of {AMOUNT_PER_REQUEST} each from{' '}
+        {senderWallet.name} to {receiverWallet.name}. The distributed lock allows only one to
+        process at a time — the rest are safely rejected with 429, not queued. This proves{' '}
+        {senderWallet.name}&apos;s balance can never go negative even under concurrent load.
       </p>
 
       <button className="refresh-btn" onClick={runStressTest} disabled={running}>
